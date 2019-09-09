@@ -9,8 +9,13 @@ from chat_reader import read_message
 from chat_writer import write_message
 from connection import create_connection
 from dotenv import load_dotenv
-from gui import draw, TkAppClosed
-
+from gui import (
+    draw,
+    TkAppClosed,
+    NicknameReceived,
+    ReadConnectionStateChanged,
+    SendingConnectionStateChanged
+)
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 logging.getLogger('connection').setLevel(logging.WARNING)
@@ -22,20 +27,38 @@ logger = logging.getLogger('async_chat_gui')
 logger.setLevel(logging.DEBUG)
 
 
-async def read_msgs(host, port, msgs_queue, save_queue):
-    async with create_connection(host, port) as (reader, _):
-        while True:
-            message = await read_message(reader)
-            msgs_queue.put_nowait(message)
-            save_queue.put_nowait(message)
+async def read_msgs(host, port, msgs_queue, save_queue, status_queue):
+    status_queue.put_nowait(ReadConnectionStateChanged.INITIATED)
+
+    try:
+        async with create_connection(host, port) as (reader, _):
+            status_queue.put_nowait(ReadConnectionStateChanged.ESTABLISHED)
+
+            while True:
+                message = await read_message(reader)
+                msgs_queue.put_nowait(message)
+                save_queue.put_nowait(message)
+
+    finally:
+        status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
 
 
-async def send_msgs(host, port, send_queue, token):
-    async with create_connection(host, port) as (reader, writer):
-        authorized, _ = await user_authorization(reader, writer, token)
-        while True:
-            message = await send_queue.get()
-            await write_message(writer, f'{message}\n\n')
+async def send_msgs(host, port, send_queue, status_queue, token):
+    status_queue.put_nowait(SendingConnectionStateChanged.INITIATED)
+
+    try:
+        async with create_connection(host, port) as (reader, writer):
+            status_queue.put_nowait(SendingConnectionStateChanged.ESTABLISHED)
+
+            auth, nickname = await user_authorization(reader, writer, token)
+            status_queue.put_nowait(NicknameReceived(nickname))
+
+            while True:
+                message = await send_queue.get()
+                await write_message(writer, f'{message}\n\n')
+
+    finally:
+        status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
 
 
 async def save_messages(filepath, save_queue):
@@ -76,8 +99,20 @@ async def main():
 
     await asyncio.gather(
         draw(messages_queue, sending_queue, status_updates_queue),
-        read_msgs(chat_server, port_read, messages_queue, save_msgs_queue),
-        send_msgs(chat_server, port_send, sending_queue, chat_token),
+        read_msgs(
+            chat_server,
+            port_read,
+            messages_queue,
+            save_msgs_queue,
+            status_updates_queue
+        ),
+        send_msgs(
+            chat_server,
+            port_send,
+            sending_queue,
+            status_updates_queue,
+            chat_token
+        ),
         save_messages(history_file, save_msgs_queue)
     )
 
