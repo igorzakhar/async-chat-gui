@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+import sys
 
 from aiofile import AIOFile, LineReader
 from authorization import user_authorization
@@ -8,13 +9,13 @@ from chat_reader import read_message
 from chat_writer import write_message
 from connection import create_connection
 from dotenv import load_dotenv
-from gui import draw
+from gui import draw, TkAppClosed
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 logging.getLogger('connection').setLevel(logging.WARNING)
-logging.getLogger('chat_reader').setLevel(logging.DEBUG)
-logging.getLogger('chat_writer').setLevel(logging.DEBUG)
+logging.getLogger('chat_reader').setLevel(logging.WARNING)
+logging.getLogger('chat_writer').setLevel(logging.WARNING)
 logging.getLogger('authorization').setLevel(logging.DEBUG)
 
 logger = logging.getLogger('async_chat_gui')
@@ -82,4 +83,7 @@ async def main():
 
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, TkAppClosed):
+        sys.exit()
