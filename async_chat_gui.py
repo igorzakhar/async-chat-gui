@@ -5,6 +5,7 @@ import os
 from aiofile import AIOFile, LineReader
 from authorization import user_authorization
 from chat_reader import read_message
+from chat_writer import write_message
 from connection import create_connection
 from dotenv import load_dotenv
 from gui import draw
@@ -26,6 +27,14 @@ async def read_msgs(host, port, msgs_queue, save_queue):
             message = await read_message(reader)
             msgs_queue.put_nowait(message)
             save_queue.put_nowait(message)
+
+
+async def send_msgs(host, port, send_queue, token):
+    async with create_connection(host, port) as (reader, writer):
+        authorized, _ = await user_authorization(reader, writer, token)
+        while True:
+            message = await send_queue.get()
+            await write_message(writer, f'{message}\n\n')
 
 
 async def save_messages(filepath, save_queue):
@@ -62,14 +71,12 @@ async def main():
     status_updates_queue = asyncio.Queue()
     save_msgs_queue = asyncio.Queue()
 
-    async with create_connection(chat_server, port_send) as (reader, writer):
-        authorized, _ = await user_authorization(reader, writer, chat_token)
-
     await restore_chat_history(history_file, messages_queue)
 
     await asyncio.gather(
         draw(messages_queue, sending_queue, status_updates_queue),
         read_msgs(chat_server, port_read, messages_queue, save_msgs_queue),
+        send_msgs(chat_server, port_send, sending_queue, chat_token),
         save_messages(history_file, save_msgs_queue)
     )
 
