@@ -3,6 +3,7 @@ import logging
 import os
 
 from aiofile import AIOFile, LineReader
+from authorization import user_authorization
 from chat_reader import read_message
 from connection import create_connection
 from dotenv import load_dotenv
@@ -12,9 +13,11 @@ from gui import draw
 logging.getLogger('asyncio').setLevel(logging.WARNING)
 logging.getLogger('connection').setLevel(logging.WARNING)
 logging.getLogger('chat_reader').setLevel(logging.DEBUG)
+logging.getLogger('chat_writer').setLevel(logging.DEBUG)
+logging.getLogger('authorization').setLevel(logging.DEBUG)
 
 logger = logging.getLogger('async_chat_gui')
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+logger.setLevel(logging.DEBUG)
 
 
 async def read_msgs(host, port, msgs_queue, save_queue):
@@ -50,12 +53,17 @@ async def main():
     load_dotenv()
     chat_server = os.getenv('CHAT_SERVER')
     port_read = os.getenv('CHAT_PORT_READ')
+    port_send = os.getenv('CHAT_PORT_SEND')
     history_file = os.getenv('CHAT_HISTORY_FILE', 'chat.history')
+    chat_token = os.getenv('CHAT_TOKEN')
 
     messages_queue = asyncio.Queue()
     sending_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
     save_msgs_queue = asyncio.Queue()
+
+    async with create_connection(chat_server, port_send) as (reader, writer):
+        authorized, _ = await user_authorization(reader, writer, chat_token)
 
     await restore_chat_history(history_file, messages_queue)
 
