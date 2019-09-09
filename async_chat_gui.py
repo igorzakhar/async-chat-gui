@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 
-from aiofile import AIOFile
+from aiofile import AIOFile, LineReader
 from chat_reader import read_message
 from connection import create_connection
 from dotenv import load_dotenv
@@ -14,7 +14,7 @@ logging.getLogger('connection').setLevel(logging.WARNING)
 logging.getLogger('chat_reader').setLevel(logging.DEBUG)
 
 logger = logging.getLogger('async_chat_gui')
-logging.basicConfig(level=logging.DEBUG, format='%(name)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 
 async def read_msgs(host, port, msgs_queue, save_queue):
@@ -30,10 +30,20 @@ async def save_messages(filepath, save_queue):
         async with AIOFile(filepath, 'a') as afp:
             while True:
                 message = await save_queue.get()
-                await afp.write(message)
+                await afp.write(f'{message}\n')
     except FileNotFoundError as err:
         logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
         sys.exit(err.errno)
+
+
+async def restore_chat_history(filename, msgs_queue):
+    try:
+        async with AIOFile(filename, 'rb') as afp:
+            async for line in LineReader(afp):
+                msgs_queue.put_nowait(line.decode().strip())
+    except FileNotFoundError as err:
+        logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
+        pass
 
 
 async def main():
@@ -46,6 +56,8 @@ async def main():
     sending_queue = asyncio.Queue()
     status_updates_queue = asyncio.Queue()
     save_msgs_queue = asyncio.Queue()
+
+    await restore_chat_history(history_file, messages_queue)
 
     await asyncio.gather(
         draw(messages_queue, sending_queue, status_updates_queue),
