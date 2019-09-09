@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+from tkinter import messagebox
 
 from chat_reader import read_message
 from chat_writer import write_message
@@ -8,6 +9,10 @@ from chat_writer import write_message
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+
+
+class InvalidToken(Exception):
+    pass
 
 
 async def is_authorized(reader, writer, token):
@@ -27,6 +32,11 @@ async def user_authorization(reader, writer, token):
             'Неизвестный токен. '
             'Поверьте его или зарегистрируйте заново.'
         )
+        messagebox.showinfo(
+            'Неверный токен',
+            'Поверьте токен, сервер его не узнал.'
+        )
+        raise InvalidToken('Your token is invalid')
     else:
         logger.debug(
             'Выполнена авторизация.'

@@ -4,7 +4,7 @@ import os
 import sys
 
 from aiofile import AIOFile, LineReader
-from authorization import user_authorization
+from authorization import user_authorization, InvalidToken
 from chat_reader import read_message
 from chat_writer import write_message
 from connection import create_connection
@@ -85,5 +85,5 @@ async def main():
 if __name__ == '__main__':
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, TkAppClosed):
+    except (KeyboardInterrupt, TkAppClosed, InvalidToken):
         sys.exit()
