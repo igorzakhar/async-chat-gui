@@ -5,6 +5,7 @@ import sys
 import time
 
 from aiofile import AIOFile, LineReader
+from async_timeout import timeout
 from authorization import user_authorization, InvalidToken
 from chat_reader import read_message
 from chat_writer import write_message
@@ -72,16 +73,24 @@ async def send_msgs(
         status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
 
 
-async def watch_for_connection(watchdog_queue, debug=False):
+async def watch_for_connection(watchdog_queue, conn_timeout=5, debug=False):
     if debug:
         watchdog_logger.setLevel(logging.DEBUG)
 
     while True:
         current_timestamp = int(time.time())
-        event = await watchdog_queue.get()
-        watchdog_logger.debug(
-            f'[{current_timestamp}] Connection is alive. {event}'
-        )
+
+        try:
+            async with timeout(conn_timeout):
+                event = await watchdog_queue.get()
+                watchdog_logger.debug(
+                    f'[{current_timestamp}] Connection is alive. {event}'
+                )
+        except asyncio.TimeoutError:
+            watchdog_logger.debug(
+                f'[{current_timestamp}] {conn_timeout}s timeout is elapsed'
+            )
+            raise ConnectionError
 
 
 async def save_messages(filepath, save_queue):
