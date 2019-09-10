@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def _get_network_streams(host, port, log_file, attempts=1, timeout=3):
+async def _get_network_streams(host, port, log_file, attempts, timeout):
     attempts_count = 0
     reader = None
     writer = None
@@ -48,8 +48,14 @@ async def _get_network_streams(host, port, log_file, attempts=1, timeout=3):
 
 
 @contextlib.asynccontextmanager
-async def create_connection(host, port, log_file=None):
-    reader, writer = await _get_network_streams(host, port, log_file)
+async def create_connection(host, port, attempts=1, timeout=3, log_file=None):
+    reader, writer = await _get_network_streams(
+        host,
+        port,
+        log_file,
+        attempts,
+        timeout
+    )
     try:
         yield reader, writer
     finally:

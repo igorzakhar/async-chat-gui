@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 import sys
@@ -18,65 +19,101 @@ from gui import (
     ReadConnectionStateChanged,
     SendingConnectionStateChanged
 )
+from utils import create_handy_nursery
+
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
-logging.getLogger('connection').setLevel(logging.WARNING)
-logging.getLogger('chat_reader').setLevel(logging.WARNING)
-logging.getLogger('chat_writer').setLevel(logging.WARNING)
-logging.getLogger('authorization').setLevel(logging.WARNING)
+logging.getLogger('connection').setLevel(logging.INFO)
+logging.getLogger('chat_reader').setLevel(logging.INFO)
+logging.getLogger('chat_writer').setLevel(logging.INFO)
+logging.getLogger('authorization').setLevel(logging.INFO)
 
 logger = logging.getLogger('async_chat_gui')
 logger.setLevel(logging.INFO)
 
 watchdog_logger = logging.getLogger('watchdog_logger')
-watchdog_logger.setLevel(logging.INFO)
+watchdog_logger.setLevel(logging.DEBUG)
 
 
-async def read_msgs(
-        host, port, msgs_queue, save_queue, status_queue, watchdog_queue):
-    status_queue.put_nowait(ReadConnectionStateChanged.INITIATED)
+async def handle_connection(
+        host, port_read, port_send, msgs_queue, send_queue,
+        status_queue, save_queue, watchdog_queue, token):
 
-    try:
-        async with create_connection(host, port) as (reader, _):
+    while True:
+        async with contextlib.AsyncExitStack() as stack:
+            status_queue.put_nowait(ReadConnectionStateChanged.INITIATED)
+            status_queue.put_nowait(SendingConnectionStateChanged.INITIATED)
+
+            reader_streams = await stack.enter_async_context(
+                create_connection(host, port_read)
+            )
+            writer_streams = await stack.enter_async_context(
+                create_connection(host, port_send)
+            )
+
             status_queue.put_nowait(ReadConnectionStateChanged.ESTABLISHED)
-
-            while True:
-                message = await read_message(reader)
-                msgs_queue.put_nowait(message)
-                save_queue.put_nowait(message)
-                watchdog_queue.put_nowait('New message in chat')
-
-    finally:
-        status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
-
-
-async def send_msgs(
-        host, port, send_queue, status_queue, watchdog_queue, token):
-    status_queue.put_nowait(SendingConnectionStateChanged.INITIATED)
-
-    try:
-        async with create_connection(host, port) as (reader, writer):
             status_queue.put_nowait(SendingConnectionStateChanged.ESTABLISHED)
 
-            watchdog_queue.put_nowait('Prompt before auth')
-            auth, nickname = await user_authorization(reader, writer, token)
+            try:
+                if token:
+                    _, nickname = await user_authorization(
+                        *writer_streams,
+                        watchdog_queue,
+                        token
+                    )
 
-            watchdog_queue.put_nowait('Authorization done')
-            status_queue.put_nowait(NicknameReceived(nickname))
+                status_queue.put_nowait(NicknameReceived(nickname))
 
-            while True:
-                message = await send_queue.get()
-                await write_message(writer, f'{message}\n\n')
-                watchdog_queue.put_nowait('Message sent')
+                async with create_handy_nursery() as nursery:
+                    reader, _ = reader_streams
 
-    finally:
-        status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
+                    nursery.start_soon(
+                        read_msgs(
+                            reader,
+                            msgs_queue,
+                            save_queue,
+                            watchdog_queue
+                        )
+                    )
+                    nursery.start_soon(
+                        send_msgs(
+                            *writer_streams,
+                            send_queue,
+                            watchdog_queue,
+                            token
+                        )
+                    )
+
+                    nursery.start_soon(watch_for_connection(watchdog_queue))
+
+            except (
+                ConnectionRefusedError,
+                ConnectionResetError,
+                ConnectionError
+            ):
+                status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
+                status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
+                continue
+
+            break
 
 
-async def watch_for_connection(watchdog_queue, conn_timeout=5, debug=False):
-    if debug:
-        watchdog_logger.setLevel(logging.DEBUG)
+async def read_msgs(reader, msgs_queue, save_queue, watchdog_queue):
+    while True:
+        message = await read_message(reader)
+        msgs_queue.put_nowait(message)
+        save_queue.put_nowait(message)
+        watchdog_queue.put_nowait('New message in chat')
 
+
+async def send_msgs(reader, writer, send_queue, watchdog_queue, token):
+    while True:
+        message = await send_queue.get()
+        await write_message(writer, f'{message}\n\n')
+        watchdog_queue.put_nowait('Message sent')
+
+
+async def watch_for_connection(watchdog_queue, conn_timeout=5):
     while True:
         current_timestamp = int(time.time())
 
@@ -86,6 +123,7 @@ async def watch_for_connection(watchdog_queue, conn_timeout=5, debug=False):
                 watchdog_logger.debug(
                     f'[{current_timestamp}] Connection is alive. {event}'
                 )
+
         except asyncio.TimeoutError:
             watchdog_logger.debug(
                 f'[{current_timestamp}] {conn_timeout}s timeout is elapsed'
@@ -130,27 +168,26 @@ async def main():
 
     await restore_chat_history(history_file, messages_queue)
 
-    await asyncio.gather(
-        draw(messages_queue, sending_queue, status_updates_queue),
-        read_msgs(
-            chat_server,
-            port_read,
-            messages_queue,
-            save_msgs_queue,
-            status_updates_queue,
-            watchdog_queue,
-        ),
-        send_msgs(
-            chat_server,
-            port_send,
-            sending_queue,
-            status_updates_queue,
-            watchdog_queue,
-            chat_token
-        ),
-        save_messages(history_file, save_msgs_queue),
-        watch_for_connection(watchdog_queue, debug=True)
-    )
+    async with create_handy_nursery() as nursery:
+        nursery.start_soon(
+            draw(messages_queue, sending_queue, status_updates_queue)
+        )
+
+        nursery.start_soon(
+            handle_connection(
+                chat_server,
+                port_read,
+                port_send,
+                messages_queue,
+                sending_queue,
+                status_updates_queue,
+                save_msgs_queue,
+                watchdog_queue,
+                chat_token
+            )
+        )
+
+        nursery.start_soon(save_messages(history_file, save_msgs_queue))
 
 
 if __name__ == '__main__':
