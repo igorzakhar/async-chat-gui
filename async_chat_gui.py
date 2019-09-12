@@ -80,7 +80,6 @@ async def handle_connection(
                             *writer_streams,
                             send_queue,
                             watchdog_queue,
-                            token
                         )
                     )
 
@@ -106,7 +105,7 @@ async def read_msgs(reader, msgs_queue, save_queue, watchdog_queue):
         watchdog_queue.put_nowait('New message in chat')
 
 
-async def send_msgs(reader, writer, send_queue, watchdog_queue, token):
+async def send_msgs(reader, writer, send_queue, watchdog_queue):
     while True:
         message = await send_queue.get()
         await write_message(writer, f'{message}\n\n')
