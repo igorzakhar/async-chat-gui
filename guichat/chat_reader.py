@@ -1,8 +1,7 @@
 import asyncio
 import logging
 
-
-logger = logging.getLogger(__name__)
+from .log import logger
 
 
 async def read_message(reader):

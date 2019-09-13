@@ -3,12 +3,9 @@ import json
 import logging
 from tkinter import messagebox
 
-from chat_reader import read_message
-from chat_writer import write_message
-
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+from .chat_reader import read_message
+from .chat_writer import write_message
+from .log import logger
 
 
 class InvalidToken(Exception):

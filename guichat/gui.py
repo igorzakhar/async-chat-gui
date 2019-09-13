@@ -3,7 +3,7 @@ import asyncio
 from tkinter.scrolledtext import ScrolledText
 from enum import Enum
 
-from utils import create_handy_nursery
+from guichat.utils import create_handy_nursery
 
 
 class TkAppClosed(Exception):

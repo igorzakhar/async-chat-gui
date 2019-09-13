@@ -2,8 +2,7 @@ import asyncio
 import contextlib
 import logging
 
-
-logger = logging.getLogger(__name__)
+from .log import logger
 
 
 async def _get_network_streams(host, port, log_file, attempts, timeout):

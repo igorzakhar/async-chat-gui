@@ -3,36 +3,30 @@ import contextlib
 import logging
 import os
 import sys
-import time
 
 from aiofile import AIOFile, LineReader
-from async_timeout import timeout
-from authorization import user_authorization, InvalidToken
-from chat_reader import read_message
-from chat_writer import write_message
-from connection import create_connection
 from dotenv import load_dotenv
-from gui import (
+from guichat.authorization import user_authorization, InvalidToken
+from guichat.chat_reader import read_message
+from guichat.chat_writer import write_message
+from guichat.connection import create_connection
+from guichat.gui import (
     draw,
     TkAppClosed,
     NicknameReceived,
     ReadConnectionStateChanged,
     SendingConnectionStateChanged
 )
-from utils import create_handy_nursery
+from guichat.utils import create_handy_nursery
+from guichat.watchdog import watch_for_connection
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
-logging.getLogger('connection').setLevel(logging.INFO)
-logging.getLogger('chat_reader').setLevel(logging.INFO)
-logging.getLogger('chat_writer').setLevel(logging.INFO)
-logging.getLogger('authorization').setLevel(logging.INFO)
+logging.getLogger('guichat').setLevel(logging.WARNING)
+logging.getLogger('guichat.watchdog').setLevel(logging.DEBUG)
 
-logger = logging.getLogger('async_chat_gui')
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-watchdog_logger = logging.getLogger('watchdog_logger')
-watchdog_logger.setLevel(logging.DEBUG)
 
 
 async def handle_connection(
@@ -88,7 +82,7 @@ async def handle_connection(
             except (
                 ConnectionRefusedError,
                 ConnectionResetError,
-                ConnectionError
+                ConnectionError,
             ):
                 status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
                 status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
@@ -110,24 +104,6 @@ async def send_msgs(reader, writer, send_queue, watchdog_queue):
         message = await send_queue.get()
         await write_message(writer, f'{message}\n\n')
         watchdog_queue.put_nowait('Message sent')
-
-
-async def watch_for_connection(watchdog_queue, conn_timeout=5):
-    while True:
-        current_timestamp = int(time.time())
-
-        try:
-            async with timeout(conn_timeout):
-                event = await watchdog_queue.get()
-                watchdog_logger.debug(
-                    f'[{current_timestamp}] Connection is alive. {event}'
-                )
-
-        except asyncio.TimeoutError:
-            watchdog_logger.debug(
-                f'[{current_timestamp}] {conn_timeout}s timeout is elapsed'
-            )
-            raise ConnectionError
 
 
 async def save_messages(filepath, save_queue):

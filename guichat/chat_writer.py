@@ -1,9 +1,7 @@
 import asyncio
 import logging
 
-
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
+from .log import logger
 
 
 async def write_message(writer, message=None):
