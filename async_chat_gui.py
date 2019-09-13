@@ -5,6 +5,7 @@ import os
 import sys
 import socket
 
+import aionursery
 from aiofile import AIOFile, LineReader
 from dotenv import load_dotenv
 from guichat.authorization import user_authorization, InvalidToken
@@ -88,6 +89,7 @@ async def handle_connection(
                 ConnectionRefusedError,
                 ConnectionResetError,
                 ConnectionError,
+                aionursery.MultiError,
                 socket.gaierror
             ):
                 status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
