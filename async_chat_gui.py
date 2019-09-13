@@ -21,6 +21,7 @@ from guichat.gui import (
 )
 from guichat.utils import create_handy_nursery
 from guichat.watchdog import watch_for_connection, ping_pong
+from guichat.registration import register_new_user
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
@@ -59,7 +60,8 @@ async def handle_connection(
                     )
 
                 else:
-                    pass
+                    user_data = await register_new_user(*writer_streams)
+                    nickname = user_data.get('nickname')
 
                 status_queue.put_nowait(NicknameReceived(nickname))
 
