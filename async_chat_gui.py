@@ -33,7 +33,7 @@ logger.setLevel(logging.INFO)
 
 async def handle_connection(
         host, port_read, port_send, msgs_queue, send_queue,
-        status_queue, save_queue, watchdog_queue, token):
+        status_queue, save_queue, watchdog_queue, history_file, token):
 
     while True:
         async with contextlib.AsyncExitStack() as stack:
@@ -58,7 +58,12 @@ async def handle_connection(
                         token
                     )
 
+                else:
+                    pass
+
                 status_queue.put_nowait(NicknameReceived(nickname))
+
+                await restore_chat_history(history_file, msgs_queue)
 
                 async with create_handy_nursery() as nursery:
                     reader, _ = reader_streams
@@ -127,9 +132,9 @@ async def save_messages(filepath, save_queue):
 
 async def restore_chat_history(filename, msgs_queue):
     try:
-        async with AIOFile(filename, 'rb') as afp:
-            async for line in LineReader(afp):
-                msgs_queue.put_nowait(line.decode().strip())
+        async with AIOFile(filename, 'r') as afp:
+            messages = await afp.read()
+            msgs_queue.put_nowait(messages.strip())
     except FileNotFoundError as err:
         logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
         pass
@@ -149,8 +154,6 @@ async def main():
     save_msgs_queue = asyncio.Queue()
     watchdog_queue = asyncio.Queue()
 
-    await restore_chat_history(history_file, messages_queue)
-
     async with create_handy_nursery() as nursery:
         nursery.start_soon(
             draw(messages_queue, sending_queue, status_updates_queue)
@@ -166,6 +169,7 @@ async def main():
                 status_updates_queue,
                 save_msgs_queue,
                 watchdog_queue,
+                history_file,
                 chat_token
             )
         )
