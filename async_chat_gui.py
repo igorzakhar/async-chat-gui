@@ -3,6 +3,7 @@ import contextlib
 import logging
 import os
 import sys
+import socket
 
 from aiofile import AIOFile, LineReader
 from dotenv import load_dotenv
@@ -18,7 +19,7 @@ from guichat.gui import (
     SendingConnectionStateChanged
 )
 from guichat.utils import create_handy_nursery
-from guichat.watchdog import watch_for_connection
+from guichat.watchdog import watch_for_connection, ping_pong
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
@@ -79,10 +80,15 @@ async def handle_connection(
 
                     nursery.start_soon(watch_for_connection(watchdog_queue))
 
+                    nursery.start_soon(
+                        ping_pong(*writer_streams, watchdog_queue)
+                    )
+
             except (
                 ConnectionRefusedError,
                 ConnectionResetError,
                 ConnectionError,
+                socket.gaierror
             ):
                 status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
                 status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)

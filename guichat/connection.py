@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import logging
+import socket
 
 from .log import logger
 
@@ -18,7 +19,13 @@ async def _get_network_streams(host, port, log_file, attempts, timeout):
             if log_file:
                 await write_message_to_file(success_message, log_file)
 
-        except (ConnectionRefusedError, ConnectionResetError):
+        except (
+            ConnectionRefusedError,
+            ConnectionResetError,
+            ConnectionError,
+            socket.gaierror,
+
+        ):
 
             if attempts_count < attempts:
                 error_message = 'Нет соединения. Повторная попытка.'
@@ -47,7 +54,7 @@ async def _get_network_streams(host, port, log_file, attempts, timeout):
 
 
 @contextlib.asynccontextmanager
-async def create_connection(host, port, attempts=1, timeout=3, log_file=None):
+async def create_connection(host, port, attempts=1, timeout=5, log_file=None):
     reader, writer = await _get_network_streams(
         host,
         port,
