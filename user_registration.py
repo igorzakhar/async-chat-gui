@@ -106,7 +106,8 @@ async def draw_registration_window(reg_queue):
     )
     register_button.pack(pady=10)
 
-    await asyncio.gather(update_tk(root_frame))
+    async with create_handy_nursery() as nursery:
+        nursery.start_soon(update_tk(root_frame))
 
 
 def process_args():
