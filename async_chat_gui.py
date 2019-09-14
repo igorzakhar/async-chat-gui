@@ -6,7 +6,7 @@ import sys
 import socket
 
 import aionursery
-from aiofile import AIOFile, LineReader
+from aiofile import AIOFile
 from dotenv import load_dotenv
 from guichat.authorization import user_authorization, InvalidToken
 from guichat.chat_reader import read_message
