@@ -88,7 +88,6 @@ async def draw_registration_window(reg_queue):
     root_frame.pack(pady=10)
 
     label = tk.Label(
-        width=25,
         height=1,
         text='Введите имя пользователя'
     )
