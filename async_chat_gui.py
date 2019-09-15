@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 import socket
+from tkinter import messagebox
 
 import aionursery
 from aiofile import AIOFile
@@ -21,7 +22,6 @@ from guichat.gui import (
 )
 from guichat.utils import create_handy_nursery
 from guichat.watchdog import watch_for_connection, ping_pong
-from guichat.registration import register_new_user
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
@@ -142,13 +142,31 @@ async def restore_chat_history(filename, msgs_queue):
         pass
 
 
+async def read_token_from_file(filepath):
+    try:
+        async with AIOFile(filepath, 'r') as afp:
+            token = await afp.read()
+            return token
+    except FileNotFoundError as err:
+        logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
+        messagebox.showinfo(
+            'Файл не найден',
+            'Файл с токеном не найден.'
+        )
+        raise
+
+
 async def main():
     load_dotenv()
     chat_server = os.getenv('CHAT_SERVER')
     port_read = os.getenv('CHAT_PORT_READ')
     port_send = os.getenv('CHAT_PORT_SEND')
     history_file = os.getenv('CHAT_HISTORY_FILE', 'chat.history')
+    token_file = os.getenv('CHAT_TOKEN_FILE', 'access_token.txt')
     chat_token = os.getenv('CHAT_TOKEN')
+
+    if chat_token is None:
+        chat_token = await read_token_from_file(token_file)
 
     messages_queue = asyncio.Queue()
     sending_queue = asyncio.Queue()
@@ -182,5 +200,5 @@ async def main():
 if __name__ == '__main__':
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, TkAppClosed, InvalidToken):
+    except (KeyboardInterrupt, TkAppClosed, InvalidToken, FileNotFoundError):
         sys.exit()
