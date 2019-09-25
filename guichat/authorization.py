@@ -22,7 +22,7 @@ async def is_authorized(reader, writer, token):
     return True, account_data.get('nickname')
 
 
-async def user_authorization(reader, writer, watchdog_queue, token):
+async def authorize(reader, writer, watchdog_queue, token):
     watchdog_queue.put_nowait('Prompt before auth')
     authorized, nickname = await is_authorized(reader, writer, token)
 

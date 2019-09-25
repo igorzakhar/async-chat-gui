@@ -28,7 +28,7 @@ class RegistrationComplete(Exception):
     pass
 
 
-async def registration_new_user(host, port, reg_queue, filepath=None):
+async def register_new_user(host, port, reg_queue, filepath=None):
     async with create_connection(host, port) as (reader, writer):
         username = ''
         while not username:
@@ -134,7 +134,7 @@ async def main():
         )
 
         nursery.start_soon(
-            registration_new_user(chat_server, port_send, registration_queue)
+            register_new_user(chat_server, port_send, registration_queue)
         )
 
 

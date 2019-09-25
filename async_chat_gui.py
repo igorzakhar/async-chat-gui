@@ -9,7 +9,7 @@ from tkinter import messagebox
 import aionursery
 from aiofile import AIOFile
 from dotenv import load_dotenv
-from guichat.authorization import user_authorization, InvalidToken
+from guichat.authorization import authorize, InvalidToken
 from guichat.chat_reader import read_message
 from guichat.chat_writer import write_message
 from guichat.connection import create_connection
@@ -25,8 +25,8 @@ from guichat.watchdog import watch_for_connection, ping_pong
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
-logging.getLogger('guichat').setLevel(logging.WARNING)
-logging.getLogger('guichat.watchdog').setLevel(logging.DEBUG)
+logging.getLogger('guichat').setLevel(logging.INFO)
+logging.getLogger('guichat.watchdog').setLevel(logging.INFO)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -53,7 +53,7 @@ async def handle_connection(
 
             try:
                 if token:
-                    _, nickname = await user_authorization(
+                    _, nickname = await authorize(
                         *writer_streams,
                         watchdog_queue,
                         token
