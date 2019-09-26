@@ -59,10 +59,6 @@ async def handle_connection(
                         token
                     )
 
-                else:
-                    user_data = await register_new_user(*writer_streams)
-                    nickname = user_data.get('nickname')
-
                 status_queue.put_nowait(NicknameReceived(nickname))
 
                 await restore_chat_history(history_file, msgs_queue)
@@ -99,9 +95,11 @@ async def handle_connection(
                 aionursery.MultiError,
                 socket.gaierror
             ):
+                continue
+
+            finally:
                 status_queue.put_nowait(ReadConnectionStateChanged.CLOSED)
                 status_queue.put_nowait(SendingConnectionStateChanged.CLOSED)
-                continue
 
             break
 
