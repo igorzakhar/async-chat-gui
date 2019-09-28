@@ -48,12 +48,11 @@ async def register_new_user(host, port, reg_queue, filepath=None):
         if filepath is None:
             filepath = 'access_token.txt'
         await save_token(filepath, token)
-        messagebox.showinfo(
+
+        raise RegistrationComplete(
             'Регистрация завершена',
-            f'Ваше имя в чате: {nickname}\n'
-            f'Токен сохранен в файле: {filepath}'
+            f'Ваше имя в чате: {nickname}\nТокен сохранен в файле: {filepath}'
         )
-        raise RegistrationComplete
 
 
 async def request_for_registration(reader, writer, username):
@@ -141,5 +140,10 @@ async def main():
 if __name__ == '__main__':
     try:
         asyncio.run(main())
-    except (TkAppClosed, KeyboardInterrupt, RegistrationComplete):
+    except (TkAppClosed, KeyboardInterrupt, RegistrationComplete) as err:
+
+        if isinstance(err, RegistrationComplete):
+            title, message = err.args
+            messagebox.showinfo(title, message)
+
         sys.exit()
