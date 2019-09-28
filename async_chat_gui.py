@@ -127,7 +127,7 @@ async def save_messages(filepath, save_queue):
                 await afp.write(f'{message}\n')
     except FileNotFoundError as err:
         logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
-        sys.exit(err.errno)
+        pass
 
 
 async def restore_chat_history(filename, msgs_queue):
