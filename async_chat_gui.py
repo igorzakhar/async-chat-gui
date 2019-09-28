@@ -32,6 +32,10 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+class TokenNotFound(Exception):
+    pass
+
+
 async def handle_connection(
         host, port_read, port_send, msgs_queue, send_queue,
         status_queue, save_queue, watchdog_queue, history_file, token):
@@ -147,11 +151,7 @@ async def read_token_from_file(filepath):
             return token
     except FileNotFoundError as err:
         logger.exception(f'{err.strerror}: {err.filename}', exc_info=False)
-        messagebox.showinfo(
-            'Файл не найден',
-            'Файл с токеном не найден.'
-        )
-        raise
+        raise TokenNotFound('Файл не найден', 'Файл с токеном не найден.')
 
 
 async def main():
@@ -198,5 +198,16 @@ async def main():
 if __name__ == '__main__':
     try:
         asyncio.run(main())
-    except (KeyboardInterrupt, TkAppClosed, InvalidToken, FileNotFoundError):
+    except (
+        KeyboardInterrupt,
+        FileNotFoundError,
+        TkAppClosed,
+        InvalidToken,
+        TokenNotFound
+    ) as err:
+
+        if isinstance(err, TokenNotFound):
+            title, message = err.args
+            messagebox.showinfo(title, message)
+
         sys.exit()
