@@ -51,6 +51,8 @@ async def update_tk(root_frame, interval=1 / 120):
 
 
 async def update_conversation_history(panel, messages_queue):
+    panel.yview(tk.END)
+
     while True:
         msg = await messages_queue.get()
 
@@ -58,10 +60,11 @@ async def update_conversation_history(panel, messages_queue):
         if panel.index('end-1c') != '1.0':
             panel.insert('end', '\n')
         panel.insert('end', msg)
-        # TODO сделать промотку умной, чтобы не мешала просматривать историю сообщений
-        # ScrolledText.frame
-        # ScrolledText.vbar
-        panel.yview(tk.END)
+
+        _, y = panel.vbar.get()
+        if y == 1.0:
+            panel.yview(tk.END)
+
         panel['state'] = 'disabled'
 
 
