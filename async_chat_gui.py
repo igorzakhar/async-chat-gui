@@ -9,7 +9,7 @@ from tkinter import messagebox
 import aionursery
 from aiofile import AIOFile
 from dotenv import load_dotenv
-from guichat.authorization import authorize, InvalidToken
+from guichat.authorization import get_access_to_chat, InvalidToken
 from guichat.chat_reader import read_message
 from guichat.chat_writer import write_message
 from guichat.connection import create_connection
@@ -57,7 +57,7 @@ async def handle_connection(
 
             try:
                 if token:
-                    _, nickname = await authorize(
+                    _, nickname = await get_access_to_chat(
                         *writer_streams,
                         watchdog_queue,
                         token

@@ -12,7 +12,7 @@ class InvalidToken(Exception):
     pass
 
 
-async def is_authorized(reader, writer, token):
+async def authorize(reader, writer, token):
     data = await read_message(reader)
     await write_message(writer, f'{token}\n')
     data = await read_message(reader)
@@ -22,11 +22,11 @@ async def is_authorized(reader, writer, token):
     return True, account_data.get('nickname')
 
 
-async def authorize(reader, writer, watchdog_queue, token):
+async def get_access_to_chat(reader, writer, watchdog_queue, token):
     watchdog_queue.put_nowait('Prompt before auth')
-    authorized, nickname = await is_authorized(reader, writer, token)
+    is_authorized, nickname = await authorize(reader, writer, token)
 
-    if not authorized:
+    if not is_authorized:
         logger.debug(
             'Неизвестный токен. '
             'Поверьте его или зарегистрируйте заново.'
@@ -44,4 +44,4 @@ async def authorize(reader, writer, watchdog_queue, token):
             f'Пользователь {nickname}.'
         )
 
-    return authorized, nickname
+    return is_authorized, nickname
