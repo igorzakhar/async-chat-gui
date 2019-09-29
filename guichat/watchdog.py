@@ -8,7 +8,6 @@ from .chat_reader import read_message
 
 
 watchdog_logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 
 
 async def watch_for_connection(watchdog_queue, conn_timeout=10):

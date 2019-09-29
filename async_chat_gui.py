@@ -25,11 +25,11 @@ from guichat.watchdog import watch_for_connection, ping_pong
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
-logging.getLogger('guichat').setLevel(logging.DEBUG)
-logging.getLogger('guichat.watchdog').setLevel(logging.DEBUG)
+logging.getLogger('guichat').setLevel(logging.INFO)
+logging.getLogger('guichat.watchdog').setLevel(logging.INFO)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 
 class TokenNotFound(Exception):
