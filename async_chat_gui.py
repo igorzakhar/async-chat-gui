@@ -25,11 +25,11 @@ from guichat.watchdog import watch_for_connection, ping_pong
 
 
 logging.getLogger('asyncio').setLevel(logging.WARNING)
-logging.getLogger('guichat').setLevel(logging.INFO)
-logging.getLogger('guichat.watchdog').setLevel(logging.INFO)
+logging.getLogger('guichat').setLevel(logging.DEBUG)
+logging.getLogger('guichat.watchdog').setLevel(logging.DEBUG)
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 class TokenNotFound(Exception):
@@ -119,7 +119,7 @@ async def read_msgs(reader, msgs_queue, save_queue, watchdog_queue):
 async def send_msgs(reader, writer, send_queue, watchdog_queue):
     while True:
         message = await send_queue.get()
-        await write_message(writer, f'{message}\n\n')
+        await write_message(writer, message)
         watchdog_queue.put_nowait('Message sent')
 
 
