@@ -155,7 +155,10 @@ async def read_token_from_file(filepath):
 
 
 async def main():
+    logging.basicConfig(format='%(message)s')
+
     load_dotenv()
+
     chat_server = os.getenv('CHAT_SERVER')
     port_read = os.getenv('CHAT_PORT_READ')
     port_send = os.getenv('CHAT_PORT_SEND')

@@ -117,6 +117,8 @@ def process_args():
 
 
 async def main():
+    logging.basicConfig(format='%(message)s')
+
     load_dotenv()
 
     args = process_args()
