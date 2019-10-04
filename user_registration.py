@@ -21,7 +21,6 @@ logging.getLogger('asyncio').setLevel(logging.WARNING)
 logging.getLogger('guichat').setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 
 class RegistrationComplete(Exception):
@@ -119,9 +118,14 @@ def process_args():
 
 async def main():
     load_dotenv()
+
     args = process_args()
+
     if args.debug:
         logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
     chat_server = os.getenv('CHAT_SERVER')
     port_send = os.getenv('CHAT_PORT_SEND')
 
